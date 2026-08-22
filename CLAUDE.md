@@ -120,9 +120,14 @@ A 列がグループ名、B 列が項目名、C 列が値（mm）。項目名は
 | `door_height` |  | 高さ | 2000 |
 | `door_casing_width` |  | 枠幅 | 20 |
 | `door_casing_proud` |  | 枠出っ張り | 15 |
-| `board_thickness` | 左壁の板 | 厚み | 2 |
+| `board_thickness` | 左壁の板1 | 厚み | 2 |
 | `board_width` |  | 幅 | 50 |
 | `board_from_back` |  | 奥から | 0 |
+| `board2_from_faucet` | 左壁の板2 | 水栓の奥から | 20 |
+| `wall_transparency` | 表示 | 壁の透明度 | 75 |
+
+板1 と板2 は厚み・幅・高さを共有している（`board_thickness` / `board_width`）。
+板2 の位置だけ水栓を起点にした式で、水栓を動かせば追従する。
 
 ## オブジェクト構成
 
@@ -184,6 +189,26 @@ v.saveImage("/path/out.png", 1600, 1200, "White")
 - 奥の壁を見るのは `viewRear`（`viewFront` は手前の壁）
 - 左の壁は `viewLeft`
 - 壁が邪魔なときは `Body.ViewObject.Transparency`（現在 75）
+
+## 壁の透明度が勝手に戻る
+
+Body の表示は **Tip（先端フィーチャー）の ViewObject** が担っている。ポケットを追加すると
+新しいフィーチャーが Tip になり、その Transparency は既定の 0 なので**不透明に戻ったように見える**。
+実際に窓を足した直後にこれが起きた。
+
+ViewObject のプロパティは式リンクできない（`setExpression` を持たない）ので、
+値は `wall_transparency` に置いてあり、変更時・フィーチャー追加時にスクリプトで適用する。
+
+```python
+t = int(sh.get("C53"))                       # wall_transparency
+body.ViewObject.Transparency = t
+for o in body.Group:                         # Tip を含む全フィーチャーに効かせる
+    if hasattr(getattr(o, "ViewObject", None), "Transparency"):
+        o.ViewObject.Transparency = t
+```
+
+補助スケッチ（`RoomOutline` / `RoomOuter` / `DoorOpening` / `WindowOpening`）は
+非表示にしておく。これらもフィーチャー追加時に表示が復活することがある。
 
 ## コミット
 
