@@ -10,9 +10,9 @@ FreeCAD へは MCP 経由で接続する。作業前に `get_rpc_status` で疎�
 
 | 軸 | 向き | 範囲 |
 |---|---|---|
-| X | 右 = 幅 | 0 〜 `room_width` |
-| Y | **下（手前）= 奥行き。負の値** | 0 〜 −`room_depth` |
-| Z | 上 = 高さ | 0 〜 `room_height` |
+| X | 右 = 幅 | 0 〜 `room_width`(1680) |
+| Y | **下（手前）= 奥行き。負の値** | 0 〜 −`room_depth`(1690) |
+| Z | 上 = 高さ | 0 〜 `room_height`(2400) |
 
 Y が負である点に注意。「奥から◯mm」は Y = −◯ を意味する。
 
@@ -32,6 +32,38 @@ L 型。右上に柱が室内へ張り出している。
 
 - 奥の壁は X 0〜910 では Y=0、X 910〜1680 では Y=−200（柱の手前面）
 - 壁は厚さ 20 の中空。上下は開口（天井・床なし）
+- 開口は 3 つ: 左壁のドア（Y −846〜−1649）、手前壁のドア（X 980〜1680）、奥壁の窓
+
+## いまの棚の構成
+
+**南海プライウッド アームハング棚柱SS** による壁付け方式。左の壁だけに付く。
+
+```
+Z=1838 ── 棚柱の上端
+Z=1558 ── カゴの上端
+Z=1308 ┬─ 棚板の上面
+Z=1288 ┴─ 棚板の下面 ＝ 棚受の上面
+Z=1238 ── 棚柱の下端（蓋の上端 1288 の 50 下）
+Z=1218 ── 棚受の下端
+```
+
+| 部材 | 型番 | 寸法 | 位置 |
+|---|---|---|---|
+| 棚柱 ×2 | SS-H06W | 600 長 / 8.1 × 11 | Y −151.5、−546.5（芯々 395） |
+| 棚受 ×2 | SS-MD40W | 三角 388 × 70 × 10 | 棚柱と同じ Y |
+| 棚板 | G20-14R630-4WV | 630 × 450 × 20 | X 11〜461、Y −64〜−694 |
+| カゴ ×2 | — | 上面 510×360 / 下面 390×250 / 高 250 | X 30〜540 |
+
+棚柱の位置は機器の**すき間の中央**に置いてある。プレートの真上に置くと下端が
+プレートに食い込む。
+
+- 棚柱1 = コンセントの手前端とスイッチの奥端の中央
+- 棚柱2 = 奥の壁と水栓の奥端の中央
+
+棚柱の可動ピッチは **19mm**（1238 + 19n の位置にしか棚受が付かない）。棚板の下面
+1288 はその倍数に乗っていないので、実際は 1276 か 1295 になる。
+
+カゴは上が広がった錐台。棚板からリムがはみ出すのは承知のうえ（前に 30、手前に 56）。
 
 ## 寸法は必ずスプレッドシートのエイリアス経由で
 
@@ -42,162 +74,116 @@ obj.setExpression("Length", "Spreadsheet.room_width")   # ○
 obj.setExpression("Length", "Spreadsheet.C1")           # × 行がずれると壊れる
 ```
 
-### なぜか
+### 書き込む前に空き行を確認する
 
-このリポジトリでは番地参照が原因で 2 度事故を起こしている。
-
-1. 洗濯機の配置値を末尾に追記したつもりが、窓の行を上書きし、窓枠幅と窓枠高さが消えた
-2. 板の寸法を追記したつもりが、ドアの「枠出っ張り」を上書きし、ドア枠が 15mm → 2mm になった
-
-いずれも「末尾だと思った行に既存データがあった」ことが原因。エイリアスなら参照は壊れないが、
-**上書きそのものは防げない**ので、書き込む前に必ず空き行を確認すること。
+このリポジトリでは既存セルの上書きを 3 回やっている。窓枠の寸法、ドアの枠出っ張り、
+棚板の透明度。いずれも「末尾だと思った行に既存データがあった」ため。
 
 ```python
 # 追記する前に必ず現在の中身を出力して確認する
-for r in range(40, 60):
+for r in range(100, 115):
     cells = [sh.get("%s%d" % (c, r)) if sh.getContents("%s%d" % (c, r)) else "" for c in "ABC"]
     print(r, cells)
 ```
 
-### 行の挿入は安全
+行の挿入（`insertRows` / `removeRows`）は安全。FreeCAD が他オブジェクトの式のセル参照を
+自動追従させる。グループの途中に項目を足すならこちらを使う。
 
-FreeCAD は `insertRows` / `removeRows` のとき、他オブジェクトの式のセル参照を自動追従させる。
-グループの途中に項目を足したいときは末尾に足さず `insertRows` を使うほうが安全。
+### 式の括弧に注意
 
-### スプレッドシートの構成
+文字列で式を組み立てるとき、部分式を括弧で囲み忘れると意味が変わる。
 
-A 列がグループ名、B 列が項目名、C 列が値（mm）。項目名は
-**幅 / 高さ / 奥行き / 下端高さ / 奥から距離** で揃えている。
+```python
+TOP = "Spreadsheet.a + Spreadsheet.b"
+"(Spreadsheet.room_height - %s) / 3" % TOP     # × room_height - a + b になる
+TOP = "(Spreadsheet.a + Spreadsheet.b)"        # ○
+```
 
-## エイリアス一覧
+## 使用中のエイリアス
 
-| エイリアス | グループ | 項目 | 値 |
-|---|---|---|---|
-| `room_width` | 部屋 | 幅 | 1680 |
-| `room_depth` |  | 奥行き | 1690 |
-| `room_height` |  | 天井までの高さ | 2400 |
-| `washer_zone_width` | 洗濯機スペース | 幅 | 910 |
-| `room_left_width` | 部屋(L型) | 左側の幅 | 910 |
-| `pillar_depth` |  | 柱の出っ張り | 200 |
-| `vanity_depth` | 洗面台 | 奥行き | 550 |
-| `vanity_width` |  | 幅 | 750 |
-| `vanity_height` |  | 高さ | 808 |
-| `vanity_zone_width` |  | スペース幅 | 770 |
-| `switch_width` | スイッチ | 幅 | 70 |
-| `switch_height` |  | 高さ | 118 |
-| `switch_bottom` |  | 下端高さ | 1140 |
-| `switch_from_back` |  | 奥から距離 | 615 |
-| `outlet_width` | コンセント | 幅 | 70 |
-| `outlet_height` |  | 高さ | 119 |
-| `outlet_bottom` |  | 下端高さ | 1140 |
-| `outlet_from_back` |  | 奥から距離 | 408 |
-| `faucet_width` | 水栓 | 幅 | 76 |
-| `faucet_height` |  | 高さ | 120 |
-| `faucet_bottom` |  | 下端高さ | 1140 |
-| `faucet_from_back` |  | 奥から距離 | 303 |
-| `dryer_width` | 浴室乾燥 | 幅 | 128 |
-| `dryer_height` |  | 高さ | 118 |
-| `dryer_bottom` |  | 下端高さ | 1393 |
-| `dryer_from_back` |  | 奥から距離 | 587 |
-| `washer_width` | 洗濯機 | 幅 | 590 |
-| `washer_depth` |  | 奥行き | 750 |
-| `washer_height` |  | 高さ | 1015 |
-| `washer_lid_height` |  | 蓋の高さ | 273 |
-| `washer_from_left` |  | 左から | 290 |
-| `washer_from_back` |  | 奥から（柱の手前面が起点） | 130 |
-| `window_width` | 窓 | 幅 | 300 |
-| `window_height` |  | 高さ | 742 |
-| `window_sill` |  | 下端高さ | 1274 |
-| `window_proud` |  | 出っ張り | 17 |
-| `window_from_left` |  | 左から | 484 |
-| `window_casing_width` |  | 枠幅 | 18 |
-| `baseboard_height` | 幅木 | 高さ | 55 |
-| `baseboard_thickness` |  | 厚み | 3 |
-| `wall_thickness` | 壁 | 壁厚 | 20 |
-| `fixture_proud` | 壁付け機器 | 出っ張り | 5 |
-| `door_from_back` | ドア | 奥から | 846 |
-| `door_width` |  | 幅 | 803 |
-| `door_height` |  | 高さ | 2000 |
-| `door_casing_width` |  | 枠幅 | 20 |
-| `door_casing_proud` |  | 枠出っ張り | 15 |
-| `board_thickness` | 左壁の板1 | 厚み | 2 |
-| `board_width` |  | 幅 | 50 |
-| `board_from_back` |  | 奥から | 0 |
-| `board2_from_faucet` | 左壁の板2 | 水栓の奥から | 20 |
-| `wall_transparency` | 表示 | 壁の透明度 | 75 |
+A 列がグループ名、B 列が項目名、C 列が値（mm）。
 
-板1 と板2 は厚み・幅・高さを共有している（`board_thickness` / `board_width`）。
-板2 の位置だけ水栓を起点にした式で、水栓を動かせば追従する。
+| エイリアス | 値 | 意味 |
+|---|---|---|
+| `room_width` / `room_depth` / `room_height` | 1680 / 1690 / 2400 | 部屋の内寸 |
+| `room_left_width` / `pillar_depth` | 910 / 200 | L 型の左側の幅 / 柱の出っ張り |
+| `wall_thickness` | 20 | 壁厚 |
+| `vanity_width` / `vanity_depth` / `vanity_height` | 750 / 550 / 808 | 洗面台 |
+| `washer_width` / `washer_depth` / `washer_height` | 590 / 515 / 1015 | 洗濯機 |
+| `washer_from_left` / `washer_from_back` | 290 / 130 | 洗濯機の位置（奥は柱の手前面基準） |
+| `washer_lid_height` | 273 | 蓋を開けたときの立ち上がり |
+| `lid_width` / `lid_depth` | 195 / 280 | 蓋の実寸 |
+| `lid_from_left` / `lid_from_front` | 50 / 180 | 蓋の位置（洗濯機の左手前基準） |
+| `switch_*` / `outlet_*` / `faucet_*` / `dryer_*` | | 壁付け機器の 幅/高さ/下端高さ/奥から距離 |
+| `fixture_proud` | 5 | 壁付け機器の出っ張り |
+| `window_width` / `window_height` / `window_sill` | 300 / 742 / 1277 | 窓 |
+| `window_from_left` / `window_proud` / `window_casing_width` | 485 / 17 / 18 | 窓の位置・枠 |
+| `door_from_back` / `door_width` / `door_height` | 846 / 803 / 2000 | 左壁のドア |
+| `door_casing_width` / `door_casing_proud` | 20 / 15 | ドア枠 |
+| `door2_width` / `door2_height` | 700 / 2000 | 手前壁のドア |
+| `baseboard_height` / `baseboard_thickness` | 55 / 3 | 幅木 |
+| `board_thickness` | 30 | 木の断面（カゴの逃げに流用中） |
+| `shelf1_thickness` | 7 | 棚板の下面 1288 を出すのに使っている |
+| `post_ss_width` / `post_ss_depth` / `post_ss_length` | 8.1 / 11 / 600 | 棚柱 SS-H06W |
+| `post_ss_below_lid` | 50 | 棚柱の下端（蓋の上端からの下がり） |
+| `shelf_w` / `shelf_d` / `shelf_t` | 630 / 450 / 20 | 棚板 G20-14R630-4WV |
+| `shelf_gap_back` / `shelf_gap_wall` | 30 / 11 | 棚板の位置（奥の壁・壁からの逃げ） |
+| `basket_width` / `basket_depth` / `basket_height` | 510 / 360 / 250 | カゴの上面と高さ |
+| `basket_bottom_width` / `basket_bottom_depth` | 390 / 250 | カゴの下面 |
+
+### 未使用のエイリアス（旧構成の名残）
+
+削除した部材のもので、いまはどの式からも参照されていない。行を消すと番地がずれるので
+**残してある**。同じ名前を再利用するときは値を確認すること。
+
+`washer_zone_width` `vanity_zone_width` `board_width` `board_from_back`
+`board2_from_faucet` `shelf1_depth` `basket_from_left` `shelf2_depth`
+`shelf2_thickness` `foot_*` `angle_*` `strip_*` `post_width`
+`rail_bottom_thickness` `arm_depth` `arm_width` `arm_height` `arm_overhang`
+`*_transparency`（透明度は式リンクできないので値の記録用）
+
+棚受の寸法（`arm_*`）が未使用なのは、棚受を `Part::Feature` で直接生成しているため。
 
 ## オブジェクト構成
 
-- `Body`（PartDesign）— 部屋の壁。`RoomOuter` でパッド → `RoomOutline` でポケット →
-  `DoorOpening` / `WindowOpening` でポケット
-- それ以外（洗面台・洗濯機・壁付け機器・幅木・ドア枠・窓枠・板）は `Part::Box` を
-  `Part` コンテナ直下に置き、寸法と `Placement` を式でリンク
+- `Body`（PartDesign）— 部屋の壁。`RoomOuter` パッド → `RoomOutline` ポケット →
+  `DoorOpening` / `WindowOpening` / `Door2Opening` ポケット
+- それ以外は `Part` コンテナ直下。ほとんどは `Part::Box` で寸法と `Placement` を式リンク
+- カゴは `Part::Wedge`（錐台）を X 軸まわり 90 度回転。ローカル (x,y,z) → グローバル (x, −z, y)
+- **棚受だけ `Part::Feature`**。三角形を拘束付きスケッチで作ると形が崩れたため、
+  `Part.Face(...).extrude(...)` で直接生成している。**式リンクがないので寸法変更時は
+  作り直しが必要**
 
-## PartDesign のポケットは向きに注意
+## PartDesign のポケットは向きと範囲に注意
 
-`Type = 1`（ThroughAll）でも、既定では材料と逆方向を切ってしまうことがある。
-実際にドアの開口が反対側（右の壁）に開いた。`Reversed` を切り替えて、
-**必ず切れた位置を検証すること**。
+`Type = 1`（ThroughAll）は既定と逆方向を切ることがある。実際にドアの開口が反対側の壁に
+開いた。`Reversed` を切り替えて、**必ず切れた位置を検証する**。
 
 ```python
 s.isInside(FreeCAD.Vector(-10, -1200, 1000), 0.1, True)   # True なら壁がある
 ```
 
+貫通させると意図しない壁まで切る場合がある。手前壁のドアは柱と X 範囲が重なるため、
+`Type = 0`（Length）で壁厚 20 ぶんだけ切り、スケッチを壁の内面に
+`AttachmentOffset` で寄せている。
+
 ## スケッチ平面のローカル座標
 
-| 平面 | ローカル u | ローカル v |
-|---|---|---|
-| XY | X | Y |
-| XZ | X | Z |
-| YZ | Y | Z |
+| 平面 | ローカル u | ローカル v | 法線 |
+|---|---|---|---|
+| XY | X | Y | +Z |
+| XZ | X | Z | −Y |
+| YZ | Y | Z | +X |
 
-新しい平面に描く前は、短い線分を 2 本置いて `Shape.Edges` の座標を見て確かめる。
-
-## 変更したら必ず検証する
-
-寸法を変えたり物を足したりしたら、以下を毎回確認する。
-
-```python
-# 干渉チェック
-a.Shape.common(b.Shape).Volume        # 0 でなければ食い込んでいる
-
-# スケッチが完全拘束のままか
-sk.FullyConstrained
-
-# 形状が壊れていないか
-body.Shape.isValid()
-len(body.Shape.Solids)
-```
-
-実測値どうしが矛盾していることが何度もあった（合計が部屋の幅に合わない等）。
-干渉が出たら黙って位置をずらさず、**どの寸法が疑わしいかを数字で示して確認する**。
-
-## ユーザーに図を見せる
-
-リモートセッションなので、FreeCAD の画面はそのままでは相手に見えない。
-画像に書き出して送る。
-
-```python
-v = FreeCADGui.getDocument("washer_shelf").ActiveView
-v.viewIsometric(); v.fitAll()
-v.saveImage("/path/out.png", 1600, 1200, "White")
-```
-
-- 奥の壁を見るのは `viewRear`（`viewFront` は手前の壁）
-- 左の壁は `viewLeft`
-- 壁が邪魔なときは `Body.ViewObject.Transparency`（現在 75）
+XZ 平面の `AttachmentOffset.Base.z` は **グローバル −Y** に効く。
 
 ## 壁の透明度が勝手に戻る
 
 Body の表示は **Tip（先端フィーチャー）の ViewObject** が担っている。ポケットを追加すると
-新しいフィーチャーが Tip になり、その Transparency は既定の 0 なので**不透明に戻ったように見える**。
-実際に窓を足した直後にこれが起きた。
+新しいフィーチャーが Tip になり、その Transparency は既定の 0 なので**不透明に戻る**。
 
-ViewObject のプロパティは式リンクできない（`setExpression` を持たない）ので、
-値は `wall_transparency` に置いてあり、変更時・フィーチャー追加時にスクリプトで適用する。
+ViewObject のプロパティは式リンクできないので、値は `wall_transparency` に置いてあり、
+変更時・フィーチャー追加時にスクリプトで適用する。
 
 ```python
 t = int(sh.get("C53"))                       # wall_transparency
@@ -207,8 +193,49 @@ for o in body.Group:                         # Tip を含む全フィーチャ�
         o.ViewObject.Transparency = t
 ```
 
-補助スケッチ（`RoomOutline` / `RoomOuter` / `DoorOpening` / `WindowOpening`）は
-非表示にしておく。これらもフィーチャー追加時に表示が復活することがある。
+補助スケッチ（`RoomOutline` / `RoomOuter` / `DoorOpening` / `WindowOpening` /
+`Door2Opening`）は非表示にしておく。フィーチャー追加時に表示が復活することがある。
+
+## 変更したら必ず検証する
+
+```python
+a.Shape.common(b.Shape).Volume        # 0 でなければ食い込んでいる
+sk.FullyConstrained                    # スケッチが完全拘束のままか
+body.Shape.isValid()
+len(body.Shape.Solids)
+```
+
+**実測値どうしが矛盾していることが何度もあった**（合計が部屋の幅に合わない、洗濯機が柱に
+めり込む等）。干渉が出たら黙って位置をずらさず、**どの寸法が疑わしいかを数字で示して確認する**。
+ユーザーが指示した位置を勝手に変えない。
+
+体積で形を検証できる。三角柱なら等価な直方体の半分、扇形なら `r²(1−π/4)×厚み`。
+
+## GUI dispatch がタイムアウトする
+
+`execute_code` が「GUI dispatch timed out after 90s」で失敗することがある。**その場合
+コードは実行されていない**ので、状態を確認してからやり直す。長いコードや大量のオブジェクト
+削除で起きやすいので、削除は数個ずつに分ける。
+
+## ユーザーに図を見せる
+
+リモートセッションなので、FreeCAD の画面はそのままでは相手に見えない。画像に書き出して送る。
+
+```python
+v = FreeCADGui.getDocument("washer_shelf").ActiveView
+cam = v.getCameraNode()
+cam.orientation.setValue(coin.SbRotation(*q))   # 下の look() で作る
+FreeCADGui.updateGui(); v.fitAll(); FreeCADGui.updateGui()
+v.saveImage("/path/out.png", 3200, 2400, "White")
+```
+
+- **`viewIsometric()` などの標準ビュー関数は使わない**。切り替えアニメーション中に
+  `saveImage` すると傾いた絵が撮れる。カメラのクォータニオンを直接設定する
+- 方位角から向きを作る `look(az, el)` を使う。標準アイソメは方位 −45°、仰角 35.264°。
+  −135° が左手前、−45° が右手前
+- カメラの `position` を直接動かすとクリッピングで真っ白になりやすい。ズームより
+  **高解像度（3200×2400）で出して相手に拡大してもらう**方が確実
+- 部材が重なって見づらいときは、関係ないオブジェクトを一時的に `Visibility = False` に
 
 ## コミット
 
