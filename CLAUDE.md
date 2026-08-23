@@ -139,10 +139,25 @@ A 列がグループ名、B 列が項目名、C 列が値（mm）。
 `washer_zone_width` `vanity_zone_width` `board_width` `board_from_back`
 `board2_from_faucet` `shelf1_depth` `basket_from_left` `shelf2_depth`
 `shelf2_thickness` `foot_*` `angle_*` `strip_*` `post_width`
-`rail_bottom_thickness` `arm_depth` `arm_width` `arm_height` `arm_overhang`
+`rail_bottom_thickness` `arm_depth`
 `*_transparency`（透明度は式リンクできないので値の記録用）
 
-棚受の寸法（`arm_*`）が未使用なのは、棚受を `Part::Feature` で直接生成しているため。
+## 棚柱と棚受の位置は shelf_overhang ひとつで決まる
+
+`shelf_overhang`（棚板の端から棚柱までの距離）を変えると、棚柱 2 本と棚受 8 本が
+まとめて動く。案A・案B とも同じ棚柱を使うので、**両案に効く**。
+
+```
+Y=0             棚板の奥端（奥の壁）
+  ↕ shelf_overhang
+Y=-overhang     棚柱2
+  ↕ shelf_w - 2*overhang（芯々）
+Y=-(shelf_w-overhang)  棚柱1
+  ↕ shelf_overhang
+Y=-shelf_w      棚板の手前端
+```
+
+大きくするほど棚柱が内側に寄り、**コンセント（Y −408〜−478）に当たる**。上限は 142 前後。
 
 ## オブジェクト構成
 
@@ -150,9 +165,18 @@ A 列がグループ名、B 列が項目名、C 列が値（mm）。
   `DoorOpening` / `WindowOpening` / `Door2Opening` ポケット
 - それ以外は `Part` コンテナ直下。ほとんどは `Part::Box` で寸法と `Placement` を式リンク
 - カゴは `Part::Wedge`（錐台）を X 軸まわり 90 度回転。ローカル (x,y,z) → グローバル (x, −z, y)
-- **棚受だけ `Part::Feature`**。三角形を拘束付きスケッチで作ると形が崩れたため、
-  `Part.Face(...).extrude(...)` で直接生成している。**式リンクがないので寸法変更時は
-  作り直しが必要**
+- 棚受も `Part::Wedge`。**上面の X 幅を 0 にすると三角柱になる**（`X2min = X2max = 0`）。
+  X 軸まわり **−90 度**回転で、ローカル (x,y,z) → グローバル (x, z, −y)。上辺が水平で
+  先端が尖った形になる
+
+### Part::Wedge は 10 個すべてのパラメータを設定する
+
+`Xmin` `Xmax` `X2min` `X2max` `Ymin` `Ymax` `Zmin` `Zmax` `Z2min` `Z2max`。式を張らなかった
+ものは**プリミティブの初期値が残る**。棚受で `Z2min` に既定の 2.0 が残り、厚みが 10 →
+8 に痩せて体積が 9% 足りなくなった。断面は正しく見えるので気づきにくい。
+
+**体積で検算する。** 三角柱なら等価な直方体の半分。合わなければどこかのパラメータが
+初期値のまま。
 
 ## PartDesign のポケットは向きと範囲に注意
 
@@ -224,8 +248,7 @@ Part
 スプレッドシートも同じで、既存のエイリアスを書き換えず `b_` を付けた別セルを足す
 （`b_arm_depth` `b_arm_overhang` `b_shelf_d`）。案が確定したら不要な方を消す。
 
-採用しなかった案をすぐ消さないこと。寸法を戻すのは手間で、`Part::Feature` の部材は
-作り直しになる。
+採用しなかった案をすぐ消さないこと。寸法を戻すのは手間。
 
 ## 寸法の報告は、指示とは限らない
 
