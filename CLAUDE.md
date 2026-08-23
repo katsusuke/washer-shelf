@@ -143,16 +143,16 @@ TOP = "(Spreadsheet.a + Spreadsheet.b)"        # ○
 | A / B | カテゴリ / サブ |
 | C / D / E | メーカー / 型番 / 備考 |
 | F / G | パラメーター / 値（エイリアスは G 列に付く） |
-| H | 出所（実測 / カタログ / 設計 / 推定 / 導出 / 旧構成(未使用)） |
+| H | 出所（実測 / カタログ / 設計 / 推定 / 導出） |
 | I / J / K | 必要数 / 入数 / 購入数（`=ceil(必要数 / 入数)`） |
 
 出所は、その数字を誰が決めたかを示す。実測はメジャー、カタログはメーカー公表値、設計は
-こちらの判断、推定は未確認（`arm_width` のみ）、導出は式セル。旧構成は削除した部材の残り。
+こちらの判断、推定は未確認（`arm_width` のみ）、導出は式セル。
 
 ### 数量
 
 型番の行に必要数を式で持たせてある。段数（`a_tiers` / `b_tiers`）とカゴの数（`a_basket_per_tier`
-/ `b_basket_per_tier`）、棚柱の本数（`post_count`）が 134 行以降にあり、そこから算出する。
+/ `b_basket_per_tier`）、棚柱の本数（`post_count`）が 114 行以降にあり、そこから算出する。
 
 | 型番 | 必要数 | 入数 | 購入数 |
 |---|---|---|---|
@@ -166,7 +166,7 @@ TOP = "(Spreadsheet.a + Spreadsheet.b)"        # ○
 段数はオブジェクトの数から自動で出ているわけではない。段を足したら `a_tiers` / `b_tiers`
 も直す。
 
-### 検査ブロック（118 行〜）
+### 検査ブロック（98 行〜）
 
 施工説明書の規定と、部材どうしの成立条件を式で持っている。G 列が実値、H 列が OK / NG。
 
@@ -198,8 +198,7 @@ TOP = "(Spreadsheet.a + Spreadsheet.b)"        # ○
 | `door_casing_width` / `door_casing_proud` | 20 / 15 | ドア枠 |
 | `door2_width` / `door2_height` | 700 / 2000 | 手前壁のドア |
 | `baseboard_height` / `baseboard_thickness` | 55 / 3 | 幅木 |
-| `board_thickness` | 30 | カゴの壁からの逃げに流用 |
-| `shelf1_thickness` | 7 | 棚板の下面を出すのに使用 |
+| `board_thickness` | 30 | カゴの壁からの逃げ（旧 左壁の板の厚み） |
 | `post_ss_width` / `post_ss_depth` / `post_ss_length` | 8.1 / 11 / 600 | 棚柱 SS-H06W |
 | `arm_width` / `arm_height` | 10 / 70 | 棚受の断面（推定値。現物で要実測） |
 | `arm_overhang` / `b_arm_overhang` | 388 / 288 | 棚受のはみ出し（案A / 案B） |
@@ -219,17 +218,6 @@ TOP = "(Spreadsheet.a + Spreadsheet.b)"        # ○
 | `a_basket_gap_back` | 20 | カゴの奥の壁からの逃げ（案A） |
 | `basket_width` / `basket_depth` / `basket_height` | 510 / 360 / 250 | カゴの上面と高さ |
 | `basket_bottom_width` / `basket_bottom_depth` | 390 / 250 | カゴの下面 |
-
-### 未使用のエイリアス
-
-削除した部材のもの。行を消すと番地がずれるので残してある。同じ名前を再利用するときは値を
-確認する。
-
-`washer_zone_width` `vanity_zone_width` `board_width` `board_from_back`
-`board2_from_faucet` `shelf1_depth` `basket_from_left` `shelf2_depth`
-`shelf2_thickness` `foot_*` `angle_*` `strip_*` `post_width`
-`rail_bottom_thickness` `arm_depth` `post_ss_below_lid`
-`*_transparency`（透明度は式リンクできないので値の記録用）
 
 ## 部材は原型 + Link
 
