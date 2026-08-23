@@ -182,6 +182,14 @@ doc.recompute()
 行を移すときは、旧セルのエイリアスを外した時点で式が `Spreadsheet.F50` のような番地参照に
 落ちる。エイリアスを付け直しても戻らないので、移動後に全式を書き戻す。
 
+エイリアスの索引が壊れることもある。`getAlias` はエイリアス名を返すのに
+`getCellFromAlias` が `None` を返し、参照する式が「Property not found」になる。付け直すと
+直る。
+
+```python
+sh.setAlias("F94", ""); sh.setAlias("F94", "a_tiers")
+```
+
 行を消す・移すたびに全式セルの値を出力して検算する。
 
 ### 検査ブロック（77 行〜）
