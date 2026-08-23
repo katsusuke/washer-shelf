@@ -270,7 +270,7 @@ len(body.Shape.Solids)
 
 ## 図を見せる
 
-リモートセッションなので FreeCAD の画面は相手に見えない。画像に書き出して送る。
+画面共有できないときは画像に書き出して送る。
 
 ```python
 v = FreeCADGui.getDocument("washer_shelf").ActiveView
