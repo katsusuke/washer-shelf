@@ -257,6 +257,9 @@ Link の数はモデルに置いてある全部で、比較用の別案も含む
 Link の `Placement` に式を張って位置を決める。原型の寸法を変えると全部に効く。案B のカゴは
 案A と同じ原型を Z 軸 90 度回転で使っている（縦置き）。
 
+内部名（`Name`）は作成後に変更できない。型番を内部名に入れるなら作成時に決める。直すには
+新しい原型を作って Link の `LinkedObject` を差し替え、古い原型を消す。
+
 ```python
 lk = doc.addObject("App::Link", name)
 lk.LinkedObject = doc.getObject("ArmMD40")
