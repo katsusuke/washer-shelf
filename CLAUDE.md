@@ -231,6 +231,34 @@ TOP = "(Spreadsheet.a + Spreadsheet.b)"        # ○
 `rail_bottom_thickness` `arm_depth` `post_ss_below_lid`
 `*_transparency`（透明度は式リンクできないので値の記録用）
 
+## 部材は原型 + Link
+
+棚柱・棚受・棚板・カゴは `Part` 内の `製品(原型)` グループに 1 つずつだけ実体があり、配置は
+`App::Link` で参照している。原型は非表示。
+
+| 原型 | Link 数 |
+|---|---|
+| SS-H06W / SS-H12W / SS-H18W | 各 2 |
+| SS-MD40W | 8（3 段 × 2 ＋ 棚1案A-2 の 2） |
+| SS-MD30W | 6 |
+| G20-14R630-4WV | 4（3 段 ＋ 棚1案A-2） |
+| E20-1R630-WV | 3 |
+| カゴ | 11（案A 6 ＋ 棚1案A-2 の 2 ＋ 案B 3） |
+
+Link の数はモデルに置いてある全部で、比較用の別案も含む。スプレッドシートの必要数は採用する
+1 構成ぶんなので一致しない。
+
+Link の `Placement` に式を張って位置を決める。原型の寸法を変えると全部に効く。案B のカゴは
+案A と同じ原型を Z 軸 90 度回転で使っている（縦置き）。
+
+```python
+lk = doc.addObject("App::Link", name)
+lk.LinkedObject = doc.getObject("ArmMD40")
+lk.setExpression("Placement.Base.z", "Spreadsheet.post_bottom_z + ...")
+lk.ViewObject.OverrideMaterial = True          # 色を個別に持たせる
+lk.ViewObject.ShapeMaterial.DiffuseColor = (...)
+```
+
 ## オブジェクトの作り方
 
 - `Body`（PartDesign）— 部屋の壁。`RoomOuter` パッド → `RoomOutline` ポケット →
